@@ -22,21 +22,18 @@ WINEDLLOVERRIDES="d3d11,d3dcompiler_47,nvapi64=n,b" %command%
 
 VR files (`openvr/`) and the DLSS/XeSS runtimes (separate release archives) are not installed.
 
-## Running alongside EDCAS (or EDHM)
+## Running alongside 3DMigoto mods (EDCAS, EDHM)
 
-ED-UP and EDCAS both ship a 3DMigoto-style `d3d11.dll`. ED-UP can chain to another
-DLL through `advanced.real_dll` in `edvr.ini`. `ed-up-install` does this for you:
-it renames the other mod's `d3d11.dll` to `d3d11_edca.dll`, installs ED-UP's as
-`d3d11.dll` and sets `real_dll`. Chain: game → ED-UP → 3DMigoto → system d3d11.
+ED-UP and 3DMigoto-based mods (EDCAS, EDHM) both use a `d3d11.dll`. ED-UP chains to
+another DLL through `real_dll` in `edvr.ini`. `ed-up-install` handles this chain:
+it backs up any existing 3DMigoto `d3d11.dll` to `d3d11_3dmigoto.dll`, installs ED-UP's as
+`d3d11.dll`, and sets `real_dll = d3d11_3dmigoto.dll`.
 
-So that EDCAS's own installer does not overwrite ED-UP, build it under the chained name
-with [edca-flake](https://github.com/Djabx/edca-flake)'s `dllName` parameter:
+Chain: game → ED-UP (`d3d11.dll`) → 3DMigoto (`d3d11_3dmigoto.dll`) → system DXVK (`d3d11.dll`).
 
-```nix
-environment.systemPackages = [
-  (edcas.packages.${system}.default.override { dllName = "d3d11_edca.dll"; })
-  ed-up.packages.${system}.default
-];
+To ensure the chain is always intact before launch (even if EDCAS or EDHM-UI restored
+its own files), invoke `ed-up-install -q` in your launch options (Steam or MinEdLauncher):
+
+```sh
+sh -c 'ed-up-install -q; MinEdLauncher "$@" /autorun /autoquit' -- %command%
 ```
-
-Then run `ed-up-install` once.
