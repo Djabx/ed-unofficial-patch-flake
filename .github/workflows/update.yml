@@ -1,0 +1,66 @@
+name: Update upstream ED-UP
+
+on:
+  schedule:
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+
+jobs:
+  update-and-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+
+      - name: Update nixpkgs
+        run: nix flake update
+
+      - name: Bump ED-UP to the latest release
+        run: |
+          set -euo pipefail
+          TAG=$(curl -fsSL ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} \
+            https://api.github.com/repos/characterecho-sean/ed-unofficial-patch/releases/latest \
+            | jq -r .tag_name)
+          VERSION=${TAG#v}
+          CURRENT=$(sed -n 's/^  version = "\(.*\)";/\1/p' package.nix)
+          echo "upstream=$VERSION current=$CURRENT"
+          if [ "$VERSION" != "$CURRENT" ]; then
+            URL="https://github.com/characterecho-sean/ed-unofficial-patch/releases/download/${TAG}/ed-up-core-${VERSION}.zip"
+            HASH=$(nix store prefetch-file --json "$URL" | jq -r .hash)
+            sed -i "s|^  version = \".*\";|  version = \"$VERSION\";|; s|hash = \"sha256-[^\"]*\";|hash = \"$HASH\";|" package.nix
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for changes
+        id: check_diff
+        run: |
+          git add .
+          if git diff --staged --quiet; then
+            echo "has_updates=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_updates=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate build
+        if: steps.check_diff.outputs.has_updates == 'true'
+        run: nix build .#default --no-link
+
+      - name: Commit, tag and push
+        if: steps.check_diff.outputs.has_updates == 'true'
+        run: |
+          VERSION=$(nix eval --raw .#packages.x86_64-linux.default.version)
+          TAG="v${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(deps): update ED-UP to $VERSION and update nixpkgs"
+          git push origin main
+          if ! git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            git tag -a "$TAG" -m "Release $TAG (automated upstream update)"
+            git push origin "$TAG"
+          fi
