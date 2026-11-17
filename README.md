@@ -12,7 +12,7 @@ A daily CI job bumps the version and hash from the latest upstream release.
 nix run github:Djabx/ed-unofficial-patch-flake -- --game-dir /path/to/Products/elite-dangerous-odyssey-64
 ```
 
-Without `--game-dir`, the Steam library is searched. Other options:
+Without `--game-dir`, the game folder is autodetected like ED-Outrider does: every Steam library listed in `libraryfolders.vdf` (native, `~/.steam`, Flatpak, snap; non-standard libraries included), then Heroic/Lutris/Bottles prefixes. Other options:
 `--chain-name NAME` (default `d3d11_edca.dll`) and `--uninstall`.
 Run it with Elite closed, then set the Steam launch option:
 
