@@ -11,7 +11,7 @@
 }:
 
 let
-  version = "0.22.3";
+  version = "0.23.0";
 in
 stdenvNoCC.mkDerivation {
   pname = "ed-up";
@@ -20,7 +20,7 @@ stdenvNoCC.mkDerivation {
   # Windows binary release: ED-UP is built with Visual Studio, not buildable here.
   src = fetchurl {
     url = "https://github.com/characterecho-sean/ed-unofficial-patch/releases/download/v${version}/ed-up-core-${version}.zip";
-    hash = "sha256-DcwSATpo5GeubMwkLI9sRoByASoefBVQAMWKAUWh7yo=";
+    hash = "sha256-yNkxJoYkAp2ufKVkFwSLKzmcbOh49e2W+4+6GC5DSos=";
   };
 
   nativeBuildInputs = [
